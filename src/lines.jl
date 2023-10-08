@@ -1,6 +1,9 @@
+using HorizonSideRobots
+
 inverse(side :: HorizonSide) = HorizonSide(mod(Int(side) + 2, 4))
 inverse(side) = (inverse(side[1]), inverse(side[2]))
-
+left(side :: HorizonSide) = HorizonSide(mod(Int(side) + 1, 4))
+right(side :: HorizonSide) = HorizonSide(mod(Int(side) + 3, 4))
 
 function distance(r, side)
    if isborder(r, side)
@@ -30,15 +33,32 @@ function HorizonSideRobots.isborder(robot, side)
     end
 end
 
+function move_n!(robot, side, n)
+    print(side)
+    print(n)
+    while n > 0
+        move!(robot, side)
+        n -= 1
+    end
+end
+
+function move_n_f!(should_stop, robot, side, n)
+    print(side)
+    print(n)
+    while n > 0 && !should_stop()
+        move!(robot, side)
+        n -= 1
+    end
+end
 
 
-function moveN!(robot, side, distance, mark=false)
+function move_n!(robot, side, distance, mark)
    if distance != 0
         move!(robot, side)
         if mark
             putmarker!(robot)
         end
-        moveN!(robot, side, distance - 1, mark)
+        move_n!(robot, side, distance - 1, mark)
    end
 end
 
@@ -79,4 +99,75 @@ function mark_perimiter_and_return(robot)
     
     moveN!(robot, Sud, x)
     moveN!(robot, West, y)
+end
+
+function move_along!(robot, side, should_mark = false)
+    res = 0
+    while !isborder(robot, side)
+        res += 1
+        move!(robot, side)
+        if should_mark
+            putmarker!(robot)
+        end
+    end
+    return res
+end
+
+function go_to_corner(robot)
+    res = Tuple{HorizonSide, Integer}[]
+    while !isborder(robot, West) || !isborder(robot, Sud)
+        for i in [West, Sud]
+            push!(res, (i, move_along!(robot, i)))
+        end
+    end
+    return res
+end
+
+function go_back(robot, path)
+    for (side, i) in reverse(path)
+        move_n!(robot, inverse(side), i)
+    end
+end
+
+function mark_perimiter(robot)
+    for side in [Nord, Ost, Sud, West]
+        move_along!(robot, side, true)
+    end
+end
+
+function shattle!(shourld_stop, robot, side)
+    n = 1
+    while !shourld_stop()
+        move_n!(robot, side, n)
+        n += 1
+        side = inverse(side)
+    end
+end
+
+function spiral!(shourld_stop, robot, side)
+    n = 1
+    while !shourld_stop()
+        move_n_f!(shourld_stop, robot, side, n)
+        side = left(side)
+        move_n_f!(shourld_stop, robot, side, n)
+        side = left(side)
+        n += 1
+    end
+end
+
+function snake!(f, robot, side, side2)
+    f()
+    while !isborder(robot, side2)
+        move!(robot, side2)
+        f()
+    end
+    while !isborder(robot, side)
+        move!(robot, side)
+        f()
+        side2 = inverse(side2)
+        while !isborder(robot, side2)
+            move!(robot, side2)
+            f()
+        end
+    end
 end
