@@ -35,7 +35,8 @@ function HSR.isborder(r :: AbstractRobot, side)
 end
  
 AnyRobot = Union{Robot,AbstractRobot}
- 
+
+# Данный робот поддерживает свои актуальные координаты при движении. 
 struct TrackingRobot{T <: AnyRobot} <: AbstractRobot
     robot :: T
     coordinates :: Coordinates
@@ -46,11 +47,15 @@ function HSR.move!(r :: TrackingRobot, side)
     move!(get_base_robot(r), side)
     move!(r.coordinates, side)
 end
- 
+
+# Рассчитывает направление повёрнутое против часовой стрелки.
 anticlockwise(side :: HorizonSide) = HorizonSide(mod(Int(side) + 1, 4))
+# Рассчитывает направление повёрнутое по часовой стрелке.
 clockwise(side :: HorizonSide) = HorizonSide(mod(Int(side) + 3, 4))
+# Рассчитывает направление обратное данному
 inverse(side :: HorizonSide) = anticlockwise(anticlockwise(side))
 
+# Обходит покругу лабиринт, находящийся со стороны side от робота robot. На каждом шаге вдоль стены вызывает tick с роботом и стороной, с которой находится стена лабиринта, обход которого совершается.
 function go_around_labirint(tick, robot :: AnyRobot, side :: HorizonSide)
     @assert isborder(robot, side)
     haveMovedAtLeastOnce = false
@@ -71,6 +76,7 @@ function go_around_labirint(tick, robot :: AnyRobot, side :: HorizonSide)
     end
 end
 
+# Считает площадь лабиринта, стена которого находится со стороны side. 
 function sum_around_labirint(r, side)
     sum = 0
     go_around_labirint(r, side) do robot, leadingSide 
@@ -83,6 +89,7 @@ function sum_around_labirint(r, side)
     return sum
 end
 
+# Проверяет, является ли робот снаружи лабиринта, стена которого находится со стороны side. 
 function is_outside_labirint(robot, side)
     max_leading_side = ()
     max_x_coordinate = 0
