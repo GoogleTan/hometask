@@ -1,4 +1,4 @@
-include("dial.jl")
+include("dual.jl")
 struct Polynomial{T}
     # 1 x x^2 x^3...
     coeff :: Vector{T}
