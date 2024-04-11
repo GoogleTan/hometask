@@ -73,6 +73,14 @@ function newton(f :: Function, x :: T; epsilon = 1e-8, num_max = 10, valdiffIn :
         return nothing
     end 
     currentX
+end 
+
+function newton(x :: T; epsilon = 1e-8, num_max = 10, valdiffIn :: Function) where T
+    currentX = x
+    for i = 1:num_max 
+        currentX = currentX + valdiffIn(currentX)
+    end
+    currentX
 end
  
 function valdif_mathan(f, x) 
@@ -90,7 +98,7 @@ function forth()
     println(pair(newton(f, -0.5)))
 end
  
-function log(value, a, e)
+function my_log(value, a, e)
     z = value
     t = 1.0
     y = 0.0
@@ -111,21 +119,18 @@ end
  
 function log2(value, a, e)
     if a < 1
-        -log(value, 1/a, e)
+        -my_log(value, 1/a, e)
     else
-        log(value, a, e)
+        my_log(value, a, e)
     end
 end
  
-function cos(x, n = 1000)
-    res = 0
-    i = n
-    while i > 0
-        res += 2 * x
-        res *= x
-        res /= 2 * i
-        res /= 2 * i - 1
-        i -= 1
+function my_cos(x :: T, n = 10000000) where T
+    res = zero(T)
+    acc = one(T)
+    for i in 1:n
+        acc *= -(x * x) / (2.0 * float(i) * (2.0 * float(i) - 1.0))
+        res += acc
     end
     res
 end
@@ -158,11 +163,78 @@ function j(A :: Int64, x :: T) where T
     res
 end
 
-function j1(a :: Int64)
-    (x) -> j(a, x)
+function jakobian(functions :: Vector{Function}, args :: Vector{T})::Matrix{T} where T
+    res = zeros(length(functions), length(functions))
+    for i in eachindex(functions)
+        for j in eachindex(functions)
+            argsij = Vector{Union{Dual{T},T}}(args)
+            argsij[j] = Dual{T}(argsij[j], one(T))
+            res[i, j] =  functions[i](argsij...).b
+        end
+    end
+    return res
 end
 
-function make_plot()
+function jakobian(functions :: Vector{Function}, args :: Matrix{T})::Matrix{T} where T
+    res = zeros(length(functions), length(functions))
+    for i in 1:length(functions)
+        for j in 1:length(functions)
+            argsij = Matrix{Union{Dual{T},T}}(args)
+            argsij[j] = Dual{T}(argsij[j], one(T))
+            res[i, j] =  functions[i](argsij...).b
+        end
+    end
+    return res
+end
+
+function apply(functions :: Vector{Function}, args :: Matrix{T})::Matrix{T} where {T}
+    res = zeros(T, length(functions), 1)
+    for i in eachindex(functions)
+        res[i] = functions[i](args...)
+    end
+    return res
+end
+
+function main()
+    #1, 2
+    println(newton(x -> cos(x) - x, 1.0))
+    println(newton(
+        1.0,
+        valdiffIn = (x) -> - (cos(x) - x) / (-sin(x) - one(typeof(x)))
+    ))
+    println(newton(x -> my_cos(x) - x, 1.0, valdiffIn = valdif_mathan))
+    println()
+    # 3
+    p = Polynomial{Complex{Float64}}([-1.0 + 0.0im, -3.0 + 0.0im, 5.0 + 0.2im, 1.0 + 0.0im])
+    println(root(p, -2.0 + 0.0im, 0.001))
+    println()
+
+    #4
+    functions = Vector{Function}([(x, y) -> x^2.0 + y^2.0 - 2.0, (x, y) -> x^3.0 * y - 1.0])
+    initial = ones(Float64, 2, 1)
+    initial[1, 1] = 2.0
+    initial[2, 1] = 0.0
+    println(
+        newton(
+            initial,
+            valdiffIn = (args) -> -(jakobian(functions, args))\apply(functions, args),
+        )
+    )
+
+    #5
+    println(my_log(10.0, 3.0, 0.0001))
+    println(log2(10.0, 1 / 3, 0.0001))
+    println()
+
+    #6, 7
+    println(my_cos(4.0, 10))
+    println(my_cos(4.0))
+
+    #8
+    println(exp(4.0))
+
+    #9
+    j1(a) = (x) -> j(a, x) 
     xx = 0:0.01:10π
 
     yy = j1(0).(xx)
@@ -178,14 +250,8 @@ function make_plot()
     display(p) 
     display(p2) 
     display(p3) 
-    
-end
 
-function jakobian(functions :: Vector{Function})
-    res = Array{Function}(undef, functions.length(), functions.length())
-    for i in 1:functions.length()
-        for j in 1:functions.length()
-            res[i, j] =  
-        end
-    end
+    # 10
+    println(newton(x -> jakobian(0, x), 1.0))
+    println()
 end
