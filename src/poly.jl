@@ -1,3 +1,4 @@
+include("dial.jl")
 struct Polynomial{T}
     # 1 x x^2 x^3...
     coeff :: Vector{T}
@@ -105,6 +106,10 @@ function Base.show(io::IO, a :: Polynomial{T}) where T
             print(io, "$value * x^$j")
         end
     end
+end
+
+function root(p :: Polynomial{Complex{T}}, start :: Complex{T}, tool :: AbstractFloat) :: Union{Complex{T}, Nothing} where T
+    newton((x) -> p(x), start, epsilon = tool)
 end
 
 println(
